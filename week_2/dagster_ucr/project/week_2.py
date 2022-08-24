@@ -3,9 +3,12 @@ from typing import List
 from dagster import In, Nothing, Out, ResourceDefinition, graph, op
 from dagster_ucr.project.types import Aggregation, Stock
 from dagster_ucr.resources import mock_s3_resource, redis_resource, s3_resource
+from week_2.dagster_ucr import resources
 
 
-@op
+@op(
+    required_resource_keys={"s3_resource"}
+)
 def get_s3_data():
     pass
 
