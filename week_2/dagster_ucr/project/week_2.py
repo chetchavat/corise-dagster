@@ -3,52 +3,49 @@ from typing import List
 from dagster import In, Nothing, Out, ResourceDefinition, graph, op
 from dagster_ucr.project.types import Aggregation, Stock
 from dagster_ucr.resources import mock_s3_resource, redis_resource, s3_resource
-from week_2.dagster_ucr import resources
 
 
 @op(
-    required_resource_keys={"s3_resource"},
+    required_resource_keys={"s3"},
     config_schema={"s3_key": str},
-    out={"stocks": Out(dagster_type=List(Stock))},
+    out={"stocks": Out(dagster_type=List[Stock])},
     description='List of Stocks'
 )
 def get_s3_data(context):
-    output = List()
-    output.append(context.resources.get_data())
+    output = list()
+    s3_key = context.op_config['s3_key']
+    s3_data = context.resources.s3.get_data(s3_key)
+    for row in s3_data:
+        stock = Stock.from_list(row)
+        output.append(stock)
     return output
 
 
-
 @op(
-    config_schema={'nlargest': int},
-    ins={"stocks": In(dagster_type=List)},
-    out=DynamicOut(),
+    ins={"stocks": In(dagster_type=List[Stock])},
+    out={"agg": Out(dagster_type=Aggregation)},
     description="Determine the Stock with the greatest high value",
 )
-def process_data(context, stocks):
-    nlargest = context.op_config['nlargest']
-    if nlargest is None:
-        nlargest = 1
+def process_data(stocks):
     sorted_stocks = sorted(stocks, key=lambda x: x.high, reverse=True) 
-    for n in range(0, nlargest):
-        high_day = sorted_stocks[n].date
-        high_high = sorted_stocks[n].high
-        output = Aggregation(date=high_day, high=high_high)
-        yield DynamicOutput(output, mapping_key=str(n))
+    high_day = sorted_stocks[0].date
+    high_high = sorted_stocks[0].high
+    output = Aggregation(date=high_day, high=high_high)
+    return output
 
 
 @op(
-    required_resource_keys={'redis_resource'},
+    required_resource_keys={'redis'},
     ins={"agg": In(dagster_type=Aggregation)}
 )
 def put_redis_data(context, agg):
-    context.resources.put_data(agg.date, str(agg.high))
+    context.resources.redis.put_data(agg.date, str(agg.high))
 
 
 @graph
 def week_2_pipeline():
     process = process_data(get_s3_data())
-    redis_input = process.map(put_redis_data)
+    redis_input = put_redis_data(process)
 
 
 local = {
