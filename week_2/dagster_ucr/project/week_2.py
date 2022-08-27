@@ -39,7 +39,7 @@ def process_data(stocks):
     ins={"agg": In(dagster_type=Aggregation)}
 )
 def put_redis_data(context, agg):
-    context.resources.redis.put_data(agg.date, str(agg.high))
+    context.resources.redis.put_data(str(agg.date), str(agg.high))
 
 
 @graph
