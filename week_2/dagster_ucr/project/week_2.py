@@ -7,10 +7,16 @@ from week_2.dagster_ucr import resources
 
 
 @op(
-    required_resource_keys={"s3_resource"}
+    required_resource_keys={"s3_resource"},
+    config_schema={"s3_key": str},
+    out={"stocks": Out(dagster_type=List(Stock))},
+    description='List of Stocks'
 )
-def get_s3_data():
-    pass
+def get_s3_data(context):
+    output = List()
+    output.append(context.resources.get_data())
+    return output
+
 
 
 @op(
@@ -31,15 +37,18 @@ def process_data(context, stocks):
         yield DynamicOutput(output, mapping_key=str(n))
 
 
-@op
-def put_redis_data():
-    pass
+@op(
+    required_resource_keys={'redis_resource'},
+    ins={"agg": In(dagster_type=Aggregation)}
+)
+def put_redis_data(context, agg):
+    context.resources.put_data()
 
 
 @graph
 def week_2_pipeline():
-    # Use your graph from week 1
-    pass
+    process = process_data(get_s3_data())
+    redis_input = process.map(put_redis_data)
 
 
 local = {
