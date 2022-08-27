@@ -13,10 +13,22 @@ def get_s3_data():
     pass
 
 
-@op
-def process_data():
-    # Use your op from week 1
-    pass
+@op(
+    config_schema={'nlargest': int},
+    ins={"stocks": In(dagster_type=List)},
+    out=DynamicOut(),
+    description="Determine the Stock with the greatest high value",
+)
+def process_data(context, stocks):
+    nlargest = context.op_config['nlargest']
+    if nlargest is None:
+        nlargest = 1
+    sorted_stocks = sorted(stocks, key=lambda x: x.high, reverse=True) 
+    for n in range(0, nlargest):
+        high_day = sorted_stocks[n].date
+        high_high = sorted_stocks[n].high
+        output = Aggregation(date=high_day, high=high_high)
+        yield DynamicOutput(output, mapping_key=str(n))
 
 
 @op
