@@ -1,5 +1,4 @@
 import csv
-from os import access
 from typing import Iterator
 from unittest.mock import MagicMock
 
