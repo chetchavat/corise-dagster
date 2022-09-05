@@ -109,6 +109,7 @@ docker_week_3_pipeline = week_3_pipeline.to_job(
         "s3": s3_resource,
         "redis": redis_resource,
     },
+    op_retry_policy=RetryPolicy(max_retries=10, delay=1)
 )
 
 
@@ -132,7 +133,7 @@ def docker_week_3_sensor():
             run_key=new_key,
             run_config={
                 "ops": {
-                    "parameter": {"config": {"some_value": "pasta"}},
+                    "parameter": {"config": {"s3_key": new_key}},
                 },
             },
         )
