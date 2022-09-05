@@ -117,6 +117,22 @@ local_week_3_schedule = ScheduleDefinition(job=local_week_3_pipeline, cron_sched
 docker_week_3_schedule = ScheduleDefinition(job=docker_week_3_pipeline, cron_schedule="0 * * * *")
 
 
-@sensor
+@sensor(job=docker_week_3_pipeline)
 def docker_week_3_sensor():
-    pass
+    new_keys = get_s3_keys(
+        bucket="dagster",
+        prefix="prefix",
+        endpoint_url="",
+    )
+    if not new_keys:
+        yield SkipReason("No new S3 Keys")
+        return
+    for new_key in new_keys:
+        yield RunRequest(
+            run_key=new_key,
+            run_config={
+                "ops": {
+                    "parameter": {"config": {"some_value": "pasta"}},
+                },
+            },
+        )
