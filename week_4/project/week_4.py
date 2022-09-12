@@ -8,7 +8,6 @@ from project.types import Aggregation, Stock
 @asset(
     required_resource_keys={"s3"},
     config_schema={"s3_key": str},
-    out={"stocks": Out(dagster_type=List[Stock])},
     description="List of Stocks",
     group_name="corise"
 )
@@ -23,8 +22,6 @@ def get_s3_data(context):
 
 
 @asset(
-    ins={"stocks": In(dagster_type=List[Stock])},
-    out={"agg": Out(dagster_type=Aggregation)},
     description="Determine the Stock with the greatest high value",
     group_name="corise"
 )
@@ -38,7 +35,6 @@ def process_data(get_s3_data):
 
 @asset(
     required_resource_keys={'redis'},
-    ins={"agg": In(dagster_type=Aggregation)},
     group_name="corise"
 )
 def put_redis_data(context, process_data):
@@ -47,7 +43,7 @@ def put_redis_data(context, process_data):
 
 get_s3_data_docker, process_data_docker, put_redis_data_docker = with_resources(
     definitions=[get_s3_data, process_data, put_redis_data],
-    resource_def={
+    resource_defs={
         "s3": s3_resource,
         "redis": redis_resource
     },
